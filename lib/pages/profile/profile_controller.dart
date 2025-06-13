@@ -1,6 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path/path.dart' as path;
 import 'package:test_gojek_app/components/show_error_dialog.dart';
+import 'package:test_gojek_app/constant/AppColors.dart';
 import 'package:test_gojek_app/models/user_model.dart';
 import 'package:test_gojek_app/services/database_helper.dart';
 import 'package:test_gojek_app/services/get_box.dart';
@@ -19,6 +25,8 @@ class ProfileController extends GetxController {
   final RxBool ktpActive = false.obs;
   final RxBool emailActive = false.obs;
   final RxBool passActive = false.obs;
+
+  final ImagePicker _picker = ImagePicker();
 
   // Database helper
   final DatabaseHelper dbHelper = DatabaseHelper();
@@ -66,6 +74,142 @@ class ProfileController extends GetxController {
     }
   }
 
+  Future<void> updateProfilePhoto() async {
+    isLoading.value = true;
+    try {
+
+      final ImageSource? source = await _showImageSourceDialog();
+      if (source == null) {
+        isLoading.value = false;
+        return;
+      }
+
+      Permission permission;
+      String permissionType;
+      if (source == ImageSource.camera) {
+        permission = Permission.camera;
+        permissionType = 'kamera';
+      } else {
+        permission = Permission.photos;
+        permissionType = 'galeri';
+      }
+
+      final status = await permission.status;
+      print('Status izin $permissionType awal: $status');
+      if (status.isGranted) {
+        print('Izin $permissionType sudah diberikan');
+      } else if (status.isPermanentlyDenied) {
+        print('Izin $permissionType diblokir permanen');
+        GetDialog.showErrorDialog(
+          title: 'Izin Diblokir',
+          message:
+              'Izin $permissionType diblokir. Buka pengaturan aplikasi untuk mengizinkan.',
+          onConfirm: () => openAppSettings(),
+        );
+        return;
+      } else {
+        final newStatus = await permission.request();
+        print(
+            'Status izin $permissionType setelah request: $newStatus'); // Debugging
+
+        if (!newStatus.isGranted && permissionType == 'kamera') {
+          if (newStatus.isPermanentlyDenied) {
+            GetDialog.showErrorDialog(
+              title: 'Izin Diblokir',
+              message:
+                  'Izin $permissionType diblokir. Buka pengaturan aplikasi untuk mengizinkan.',
+              onConfirm: () => openAppSettings(),
+            );
+          } else {
+            GetDialog.showErrorDialog(
+              title: 'Izin Ditolak',
+              message: 'Izin $permissionType diperlukan.',
+            );
+          }
+          return;
+        }
+      }
+
+      final XFile? image = await _picker.pickImage(source: source);
+      if (image == null) {
+        isLoading.value = false;
+        return;
+      }
+
+      final Directory appDir = await getApplicationDocumentsDirectory();
+      final Directory profileDir =
+          Directory(path.join(appDir.path, 'image', 'profile'));
+
+      if (!await profileDir.exists()) {
+        await profileDir.create(recursive: true);
+      }
+
+      final String fileName =
+          'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final String newPath = path.join(profileDir.path, fileName);
+
+      await File(image.path).copy(newPath);
+
+      int? userId = GetBox().getIdUser();
+      if (userId == null) {
+        GetDialog.showErrorDialog(
+          title: 'Error',
+          message: 'User ID tidak ditemukan.',
+        );
+        return;
+      }
+
+      if (pathFoto.value.isNotEmpty && await File(pathFoto.value).exists()) {
+        await File(pathFoto.value).delete();
+      }
+
+      await dbHelper.database.then((db) => db.update(
+            'user',
+            {'foto_driver': newPath},
+            where: 'id = ?',
+            whereArgs: [userId],
+          ));
+
+      pathFoto.value = newPath;
+
+      Get.snackbar(
+        'Sukses',
+        'Foto profil berhasil diperbarui',
+        backgroundColor: AppColors.primary,
+        colorText: AppColors.textLight,
+      );
+    } catch (e) {
+      GetDialog.showErrorDialog(
+        title: 'Error',
+        message: 'Gagal memperbarui foto profil: $e',
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() async {
+    return await Get.bottomSheet<ImageSource>(
+      Container(
+        color: AppColors.textLight,
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: Icon(Icons.photo_library, color: AppColors.primary),
+              title: Text('Galeri', style: TextStyle(color: AppColors.primary)),
+              onTap: () => Get.back(result: ImageSource.gallery),
+            ),
+            ListTile(
+              leading: Icon(Icons.camera_alt, color: AppColors.primary),
+              title: Text('Kamera', style: TextStyle(color: AppColors.primary)),
+              onTap: () => Get.back(result: ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> handleName() async {
     if (!nameActive.value) {
       nameActive.value = true;
@@ -110,7 +254,6 @@ class ProfileController extends GetxController {
         return;
       }
 
-      // Validasi
       if (value.isEmpty) {
         GetDialog.showErrorDialog(
           title: 'Error',
@@ -135,17 +278,17 @@ class ProfileController extends GetxController {
         return;
       }
 
-      // Update database
       Map<String, dynamic> updateData = {field: value};
       await dbHelper.database.then((db) => db.update(
-        'user',
-        updateData,
-        where: 'id = ?',
-        whereArgs: [userId],
-      ));
+            'user',
+            updateData,
+            where: 'id = ?',
+            whereArgs: [userId],
+          ));
 
       active.value = false; // Kembali ke mode tampilan
-      Get.snackbar('Sukses', '$field berhasil diperbarui');
+      Get.snackbar('Sukses', '$field berhasil diperbarui',
+          backgroundColor: AppColors.textLight);
     } catch (e) {
       GetDialog.showErrorDialog(
         title: 'Error',
@@ -153,6 +296,45 @@ class ProfileController extends GetxController {
       );
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<bool> _showLogoutConfirmationDialog() async {
+    bool? confirmed = await GetDialog.showConfirmationDialog(
+      title: 'Konfirmasi Logout',
+      message: 'Apakah Anda yakin ingin logout?',
+      confirmText: 'Ya',
+      cancelText: 'Batal',
+      icon: Icons.exit_to_app
+    );
+    return confirmed ?? false;
+  }
+
+  void logout() async {
+    final bool confirmed = await _showLogoutConfirmationDialog();
+    if (!confirmed) return;
+
+    try {
+      final bool res = await GetBox().deleteIdUser();
+      if (res) {
+        Get.snackbar(
+          'Sukses',
+          'Logout berhasil, Anda akan diarahkan ke halaman login',
+          backgroundColor: AppColors.primary,
+          colorText: AppColors.textLight,
+          duration: Duration(seconds: 3),
+        );
+        await Future.delayed(Duration(seconds: 1));
+        Get.offAllNamed('/login');
+      } else {
+        throw Exception('Gagal menghapus data pengguna');
+      }
+    } catch (e) {
+      print('Error saat logout: $e');
+      GetDialog.showErrorDialog(
+        title: 'Error',
+        message: 'Gagal logout: $e',
+      );
     }
   }
 

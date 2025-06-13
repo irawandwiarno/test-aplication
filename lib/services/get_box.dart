@@ -40,6 +40,15 @@ class GetBox {
     return _box.read(_idUser) ?? null;
   }
 
+  Future<bool> deleteIdUser()async{
+    try{
+    _box.remove(_idUser);
+    }catch(e){
+      return false;
+    }
+    return true;
+  }
+
   /// Optional: Clear storage
   Future<void> clear() async {
     await _box.erase();

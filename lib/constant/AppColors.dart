@@ -7,6 +7,8 @@ class AppColors {
   static final accent = Color(0xffFB74AF); // Pink cerah
   static final textLight = Color(0xffffffff); // Putih
   static final textBlack = Color(0xff000000); // black
+  static final cancel = Color(0xffd00101); // black
+
 
   // Dark Theme Colors
   static final primaryDark = Color(0xff34A853); // Hijau lebih terang untuk kontras

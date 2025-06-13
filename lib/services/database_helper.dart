@@ -28,6 +28,9 @@ class DatabaseHelper {
       path,
       version: 1,
       onCreate: _onCreate,
+      onOpen: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
     );
   }
 
@@ -51,7 +54,9 @@ class DatabaseHelper {
      koordinat_tujuan TEXT,
      total_jarak REAL,
      total_harga REAL,
-     created_at TEXT
+     created_at TEXT,
+     user_id INTEGER,
+     FOREIGN KEY(user_id) REFERENCES user(id) ON DELETE CASCADE
     );
     ''');
   }
@@ -150,6 +155,18 @@ class DatabaseHelper {
   Future<int> deleteDelivery(int id) async {
     final db = await _instance.database;
     return await db.delete('delivery', where: 'id = ?', whereArgs: [id]);
+  }
+
+  ///GET DELIVERY BY USER ID
+  Future<List<Delivery>> getDeliveriesByUser(int userId) async {
+    final db = await _instance.database;
+    final result = await db.query(
+      'delivery',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'created_at DESC',
+    );
+    return result.map((e) => Delivery.fromMap(e)).toList();
   }
 
   //======== Insert User Default =============//

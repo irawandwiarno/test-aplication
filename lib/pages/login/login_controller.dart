@@ -7,14 +7,30 @@ import 'package:test_gojek_app/routes/route_name.dart';
 import 'package:test_gojek_app/services/database_helper.dart';
 import 'package:test_gojek_app/services/get_box.dart';
 
-class LoginController extends GetxController{
+class LoginController extends GetxController {
   TextEditingController emailTextCon = TextEditingController();
   TextEditingController passwordTextCon = TextEditingController();
   final DatabaseHelper _dbService = DatabaseHelper();
 
   RxBool isLoading = false.obs;
 
-  void loginAction()async{
+  @override
+  void onInit() async {
+    bool isFistOpenApp = await GetBox().getFirstOpenApp();
+    print('set is: $isFistOpenApp');
+    if (isFistOpenApp) {
+      print('to set');
+      var resdb = await DatabaseHelper().inserDefaultUser();
+      await GetBox().setFirstOpenApp(false);
+      bool res = await GetBox().getFirstOpenApp();
+      print('set: $res\nres db : $resdb');
+    }
+
+    // TODO: implement onInit
+    super.onInit();
+  }
+
+  void loginAction() async {
     isLoading.value = true;
     try {
       String email = emailTextCon.text.trim();
@@ -30,8 +46,6 @@ class LoginController extends GetxController{
 
       User? user = await _dbService.getByEmail(email);
 
-
-
       if (user == null) {
         GetDialog.showErrorDialog(
           title: 'Login Gagal',
@@ -45,7 +59,7 @@ class LoginController extends GetxController{
       } else {
         clearForm();
         await GetBox().setIdUser(user.id!);
-        Get.offNamed(RouteName.profile);
+        Get.offNamed(RouteName.splash);
       }
     } catch (e) {
       GetDialog.showErrorDialog(
@@ -57,7 +71,7 @@ class LoginController extends GetxController{
     }
   }
 
-  void clearForm(){
+  void clearForm() {
     emailTextCon.text = "";
     passwordTextCon.text = "";
   }

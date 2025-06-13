@@ -26,16 +26,12 @@ class DynamicFormField extends StatelessWidget {
     required this.onPressIconForm,
     required this.onPressIconText,
   }) {
-    // Inisialisasi error awal
     _error.value = validator != null ? validator!(controller.text) : null;
-    // Tambahkan listener untuk memantau perubahan teks
     controller.addListener(_updateError);
   }
 
-  // State reaktif untuk error
   final RxnString _error = RxnString();
 
-  // Update error saat teks berubah
   void _updateError() {
     _error.value = validator != null ? validator!(controller.text) : null;
     if (onChanged != null) onChanged!(controller.text);
@@ -66,7 +62,7 @@ class DynamicFormField extends StatelessWidget {
             borderSide: BorderSide(color: AppColors.textBlack , width: 2),
           ),
           labelStyle: GoogleFonts.poppins(
-            color: AppColors.second,
+            color: AppColors.textBlack,
             fontWeight: FontWeight.w500,
           ),
           errorText: _error.value,
@@ -95,9 +91,7 @@ class DynamicFormField extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     controller.text.isEmpty
-                        ? 'Tidak ada data'
-                        : isPassword
-                        ? '********'
+                        ? 'Belum di isi'
                         : controller.text,
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,

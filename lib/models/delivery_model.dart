@@ -1,13 +1,34 @@
 import 'dart:convert';
 
+class Location {
+  double long;
+  double lat;
+
+  Location({required this.long, required this.lat});
+
+  Map<String, dynamic> toJson() => {
+    'long': long,
+    'lat': lat,
+  };
+
+  factory Location.fromJson(Map<String, dynamic> json) {
+    return Location(
+      long: (json['long'] as num).toDouble(),
+      lat: (json['lat'] as num).toDouble(),
+    );
+  }
+}
+
+
 class Delivery {
   int? id;
   String fotoBarang;
-  Map<String, dynamic> koordinatAwal;
-  Map<String, dynamic> koordinatTujuan;
+  Location koordinatAwal;
+  Location koordinatTujuan;
   double totalJarak;
   double totalHarga;
   String createdAt;
+  int userId;
 
   Delivery({
     this.id,
@@ -16,6 +37,7 @@ class Delivery {
     required this.koordinatTujuan,
     required this.totalJarak,
     required this.totalHarga,
+    required this.userId,
     String? createdAt,
   }) : createdAt = createdAt ?? DateTime.now().toIso8601String();
 
@@ -23,11 +45,12 @@ class Delivery {
     return {
       'id': id,
       'foto_barang': fotoBarang,
-      'koordinat_awal': jsonEncode(koordinatAwal),
-      'koordinat_tujuan': jsonEncode(koordinatTujuan),
+      'koordinat_awal': jsonEncode(koordinatAwal.toJson()),
+      'koordinat_tujuan': jsonEncode(koordinatTujuan.toJson()),
       'total_jarak': totalJarak,
       'total_harga': totalHarga,
       'created_at': createdAt,
+      'user_id': userId,
     };
   }
 
@@ -35,11 +58,12 @@ class Delivery {
     return Delivery(
       id: map['id'],
       fotoBarang: map['foto_barang'],
-      koordinatAwal: jsonDecode(map['koordinat_awal']),
-      koordinatTujuan: jsonDecode(map['koordinat_tujuan']),
-      totalJarak: map['total_jarak'],
-      totalHarga: map['total_harga'],
+      koordinatAwal: Location.fromJson(jsonDecode(map['koordinat_awal'])),
+      koordinatTujuan: Location.fromJson(jsonDecode(map['koordinat_tujuan'])),
+      totalJarak: (map['total_jarak'] as num).toDouble(),
+      totalHarga: (map['total_harga'] as num).toDouble(),
       createdAt: map['created_at'],
+      userId: map['user_id'],
     );
   }
 }

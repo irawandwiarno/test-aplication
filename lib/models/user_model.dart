@@ -1,5 +1,3 @@
-import 'package:test_gojek_app/constant/path_image.dart';
-
 class User {
   int? id;
   String? fotoDriver;
@@ -10,7 +8,7 @@ class User {
 
   User({
     this.id,
-    this.fotoDriver = 'assets/image/no-pic.png',
+    this.fotoDriver,
     this.namaDriver = '',
     this.noKtp = '',
     required this.password,
